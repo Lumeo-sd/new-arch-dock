@@ -40,7 +40,11 @@ class MainWindow : public QQuickView
     Q_OBJECT
     Q_PROPERTY(QRect primaryGeometry READ primaryGeometry NOTIFY primaryGeometryChanged)
     Q_PROPERTY(int direction READ direction NOTIFY directionChanged)
-    Q_PROPERTY(int visibility READ visibility NOTIFY visibilityChanged)
+    // FINAL: "visibility" also exists on QWindow as an enum, and Qt warns that
+    // this member overrides a member of the base object. The name stays because
+    // it is the D-Bus property name in com.cutefish.Dock.xml; FINAL says the
+    // shadowing is deliberate and stops QML from overriding it.
+    Q_PROPERTY(int visibility READ visibility NOTIFY visibilityChanged FINAL)
     Q_PROPERTY(int style READ style NOTIFY styleChanged)
     // Auto-hide modes shrink the panel to a thin edge strip instead of
     // unmapping it; QML fades the visuals out while dockHidden is true.
