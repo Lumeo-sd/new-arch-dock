@@ -35,14 +35,26 @@ done
 
 # The QML modules the dock and FishUI import live in qt6-declarative /
 # qt6-5compat on Arch, but their package names differ across distributions -
-# so probe for the import directories themselves.
+# so probe for the import directories themselves. They do not sit in the same
+# place either: Arch uses /usr/lib/qt6/qml, Debian and Ubuntu add the
+# multiarch triplet.
+QML_ROOTS=("/usr/lib/qt6/qml" "/usr/lib64/qt6/qml" "/usr/local/lib/qt6/qml")
+if command -v gcc >/dev/null 2>&1; then
+    triplet="$(gcc -print-multiarch 2>/dev/null || true)"
+    [ -n "$triplet" ] && QML_ROOTS+=("/usr/lib/$triplet/qt6/qml")
+fi
+
 QML_IMPORTS=(
     QtQuick QtQuick/Controls QtQuick/Layouts QtQuick/Shapes QtQuick/Window
     Qt5Compat/GraphicalEffects
 )
 missing_qml=()
 for m in "${QML_IMPORTS[@]}"; do
-    [ -d "/usr/lib/qt6/qml/$m" ] || missing_qml+=("$m")
+    found=0
+    for root in "${QML_ROOTS[@]}"; do
+        [ -d "$root/$m" ] && { found=1; break; }
+    done
+    [ "$found" -eq 1 ] || missing_qml+=("$m")
 done
 
 if [ ${#missing[@]} -gt 0 ]; then
