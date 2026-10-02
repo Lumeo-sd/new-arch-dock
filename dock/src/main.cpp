@@ -24,12 +24,19 @@
 #include <QTranslator>
 #include <QLocale>
 #include <QDBusConnection>
+#include <QLoggingCategory>
 
 #include "applicationmodel.h"
 #include "mainwindow.h"
 
 int main(int argc, char *argv[])
 {
+    // Qt enables the debug level of custom logging categories by default, which
+    // would make the dock trace every mouse enter/leave. Silence just this one,
+    // and only when the user has not asked for specific rules.
+    if (!qEnvironmentVariableIsSet("QT_LOGGING_RULES"))
+        QLoggingCategory::setFilterRules("cutefish.dock.lifecycle.debug=false");
+
     QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling, true);
     QCoreApplication::setAttribute(Qt::AA_UseHighDpiPixmaps, true);
     QApplication app(argc, argv);

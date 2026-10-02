@@ -55,7 +55,7 @@ DockItem {
     onPressed: updateGeometry()
     onRightClicked: if (model.appId !== "cutefish-launcher") contextMenu.show()
 
-    onClicked: {
+    onClicked: function(mouse) {
         if (mouse.button === Qt.LeftButton)
             appModel.clicked(model.appId)
         else if (mouse.button === Qt.MiddleButton)
@@ -67,7 +67,7 @@ DockItem {
     // slide via moveDisplaced. Only one model change per gesture, so there is
     // no per-cell churn. External file drags (a .desktop from a launcher) are
     // owned by the root DropArea / drop-slot flow and never reorder here.
-    dropArea.onEntered: {
+    dropArea.onEntered: function(drag) {
         if (root.externalDragActive)
             return
 

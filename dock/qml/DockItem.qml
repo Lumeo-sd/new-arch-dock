@@ -125,28 +125,33 @@ Item {
         acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
         drag.axis: Drag.XAndYAxis
 
-        onClicked: {
+        onClicked: function(mouse) {
             if (mouse.button === Qt.RightButton)
                 control.rightClicked(mouse)
             else
                 control.clicked(mouse)
         }
 
-        onPressed: {
+        onPressed: function(mouse) {
             control.pressed(mouse)
             popupTips.hide()
+
+            // Grab the drag preview once per gesture. Doing it on every
+            // position change re-rendered the item for each mouse move and made
+            // Qt warn about the sourceSize it attaches to a grabToImage result.
+            if (control.draggable && mouse.source !== Qt.MouseEventSynthesizedByQt) {
+                icon.grabToImage(function(result) {
+                    control.Drag.imageSource = result.url
+                }, icon.size)
+            }
         }
 
-        onPositionChanged: {
+        onPositionChanged: function(mouse) {
             if (pressed) {
-                if (control.draggable && mouse.source !== Qt.MouseEventSynthesizedByQt) {
+                if (control.draggable && mouse.source !== Qt.MouseEventSynthesizedByQt)
                     drag.target = icon
-                    icon.grabToImage(function(result) {
-                        control.Drag.imageSource = result.url
-                    })
-                } else {
+                else
                     drag.target = null
-                }
             }
 
             control.positionChanged()
@@ -154,7 +159,7 @@ Item {
 
         onPressAndHold: control.pressAndHold(mouse)
 
-        onReleased: {
+        onReleased: function() {
             drag.target = null
             control.released()
         }

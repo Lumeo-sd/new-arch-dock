@@ -24,7 +24,13 @@
 #include "xwindowinterface.h"
 #include "dockadaptor.h"
 
+// Per-mouse-move tracing. main.cpp turns this category's debug level off
+// unless QT_LOGGING_RULES says otherwise; enable with
+//   QT_LOGGING_RULES="cutefish.dock.lifecycle.debug=true"
+Q_LOGGING_CATEGORY(lcLifecycle, "cutefish.dock.lifecycle")
+
 #include <QGuiApplication>
+#include <QLoggingCategory>
 #include <QScreen>
 #include <QCoreApplication>
 #include <QFile>
@@ -66,7 +72,7 @@ MainWindow::MainWindow(QQuickView *parent)
         setGeometry(v.toRect());
     });
     connect(m_resizeAnimation, &QVariantAnimation::finished, this, [this]() {
-        qInfo() << "resize finished" << geometry().width() << "x" << geometry().height();
+        qCDebug(lcLifecycle) << "resize finished" << geometry().width() << "x" << geometry().height();
         updateLayerShell();
         XWindowInterface::instance()->setPanelWindow(this);
     });
@@ -370,7 +376,7 @@ void MainWindow::resizeWindow()
 {
     // Keep the edge strip while the panel is hidden: a geometry refresh (new
     // app, icon size change, ...) must not re-expand an invisible panel.
-    qInfo() << "resizeWindow() hidden=" << m_dockHidden
+    qCDebug(lcLifecycle) << "resizeWindow() hidden=" << m_dockHidden
             << "cur=" << geometry();
     QRect end = m_dockHidden ? stripRect() : windowRect();
 
@@ -687,10 +693,10 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *e)
 {
     switch (e->type()) {
     case QEvent::MouseButtonPress:
-        qInfo() << "evfilter: press hidden=" << m_dockHidden;
+        qCDebug(lcLifecycle) << "evfilter: press hidden=" << m_dockHidden;
         break;
     case QEvent::Enter:
-        qInfo() << "evfilter: enter hidden=" << m_dockHidden;
+        qCDebug(lcLifecycle) << "evfilter: enter hidden=" << m_dockHidden;
         m_hideTimer->stop();
         m_hideBlocked = true;
 
@@ -699,7 +705,7 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *e)
             m_showTimer->start();
         break;
     case QEvent::Leave:
-        qInfo() << "evfilter: leave hidden=" << m_dockHidden;
+        qCDebug(lcLifecycle) << "evfilter: leave hidden=" << m_dockHidden;
         m_hideBlocked = false;
 
         // The auto-hide timer only applies to the hiding visibilities; the
