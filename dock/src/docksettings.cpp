@@ -57,6 +57,8 @@ DockSettings::DockSettings(QObject *parent)
         m_settings->setValue("Style", Round);
     if (!m_settings->contains("EdgeMargins"))
         m_settings->setValue("EdgeMargins", 10);
+    if (!m_settings->contains("Screen"))
+        m_settings->setValue("Screen", QString());
 
     m_settings->sync();
 
@@ -66,6 +68,21 @@ DockSettings::DockSettings(QObject *parent)
     m_roundedWindowEnabled = m_settings->value("RoundedWindow").toBool();
     m_style = static_cast<Style>(m_settings->value("Style").toInt());
     m_edgeMargins = m_settings->value("EdgeMargins").toInt();
+    m_screenName = m_settings->value("Screen").toString();
+}
+
+QString DockSettings::screenName() const
+{
+    return m_screenName;
+}
+
+void DockSettings::setScreenName(const QString &screenName)
+{
+    if (m_screenName != screenName) {
+        m_screenName = screenName;
+        m_settings->setValue("Screen", screenName);
+        emit screenNameChanged();
+    }
 }
 
 int DockSettings::iconSize() const

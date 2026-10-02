@@ -25,6 +25,7 @@ set(SRCS
     src/docksettings.cpp
     src/main.cpp
     src/mainwindow.cpp
+    src/plasmavirtualdesktop.cpp
     src/systemappmonitor.cpp
     src/systemappitem.cpp
     src/processprovider.cpp

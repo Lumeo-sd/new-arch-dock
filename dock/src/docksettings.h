@@ -31,6 +31,9 @@ class DockSettings : public QObject
     Q_PROPERTY(int edgeMargins READ edgeMargins WRITE setEdgeMargins)
     Q_PROPERTY(bool roundedWindowEnabled READ roundedWindowEnabled WRITE setRoundedWindowEnabled NOTIFY roundedWindowEnabledChanged)
     Q_PROPERTY(Style style READ style WRITE setStyle NOTIFY styleChanged)
+    // QScreen::name() of the output the dock lives on. Empty means the primary
+    // one, and it falls back to the primary when the named output is gone.
+    Q_PROPERTY(QString screenName READ screenName WRITE setScreenName NOTIFY screenNameChanged)
 
 public:
     enum Direction {
@@ -69,6 +72,9 @@ public:
     int edgeMargins() const;
     void setEdgeMargins(int edgeMargins);
 
+    QString screenName() const;
+    void setScreenName(const QString &screenName);
+
     bool roundedWindowEnabled() const;
     void setRoundedWindowEnabled(bool enabled);
 
@@ -81,6 +87,7 @@ signals:
     void visibilityChanged();
     void roundedWindowEnabledChanged();
     void styleChanged();
+    void screenNameChanged();
 
 private:
     int m_iconSize;
@@ -89,6 +96,7 @@ private:
     Direction m_direction;
     Visibility m_visibility;
     Style m_style;
+    QString m_screenName;
     QSettings *m_settings;
 };
 

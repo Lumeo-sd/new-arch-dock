@@ -18,6 +18,8 @@
  */
 
 #include "mainwindow.h"
+
+#include "plasmavirtualdesktop.h"
 #include "processprovider.h"
 #include "xwindowinterface.h"
 #include "dockadaptor.h"
@@ -131,7 +133,19 @@ MainWindow::MainWindow(QQuickView *parent)
 
     // Screen change.
     connect(qGuiApp, &QGuiApplication::primaryScreenChanged, this, &MainWindow::onPrimaryScreenChanged);
+    // Adding or unplugging an output has to be handled too: the configured
+    // screen may be the one that just disappeared.
+    connect(qGuiApp, &QGuiApplication::screenAdded, this, &MainWindow::onScreensChanged);
+    connect(qGuiApp, &QGuiApplication::screenRemoved, this, &MainWindow::onScreensChanged);
     bindScreenSignals();
+
+    // Activity: the panel follows the current desktop. Independent of the
+    // IntellHide state, which shrinks the surface instead of unmapping it.
+    connect(PlasmaVirtualDesktop::self(), &PlasmaVirtualDesktop::currentDesktopChanged,
+            this, &MainWindow::onVirtualDesktopChanged);
+    connect(PlasmaVirtualDesktop::self(), &PlasmaVirtualDesktop::desktopRemoved,
+            this, &MainWindow::onVirtualDesktopRemoved);
+    onVirtualDesktopChanged();
 
     connect(m_appModel, &ApplicationModel::countChanged, this, &MainWindow::resizeWindow);
     connect(m_settings, &DockSettings::directionChanged, this, &MainWindow::onPositionChanged);
@@ -381,10 +395,66 @@ void MainWindow::resizeWindow()
 
 void MainWindow::initScreens()
 {
-    switch (m_settings->direction()) {
-    default:
-        setScreen(qGuiApp->primaryScreen());
-        break;
+    // An empty Screen setting means "whatever Plasma calls primary", which is
+    // also the fallback when the configured output is not connected: a dock
+    // pinned to a monitor that is gone should not disappear.
+    const QString wanted = m_settings->screenName();
+    QScreen *target = nullptr;
+
+    if (!wanted.isEmpty()) {
+        const QList<QScreen *> screens = QGuiApplication::screens();
+        for (QScreen *candidate : screens) {
+            if (candidate->name() == wanted) {
+                target = candidate;
+                break;
+            }
+        }
+        if (!target)
+            qWarning() << "MainWindow: output" << wanted << "is not connected, using the primary screen.";
+    }
+
+    setScreen(target ? target : qGuiApp->primaryScreen());
+}
+
+void MainWindow::onScreensChanged()
+{
+    initScreens();
+    bindScreenSignals();
+    resizeWindow();
+}
+
+void MainWindow::onVirtualDesktopChanged()
+{
+    QScreen *output = screen();
+    const QString current = PlasmaVirtualDesktop::self()->currentDesktop(output ? output->name() : QString());
+
+    // Empty means Plasma did not tell us (interface missing, or not announced
+    // yet). Staying put is better than hiding the panel on a wrong guess.
+    if (current.isEmpty() || current == m_desktop)
+        return;
+
+    m_desktop = current;
+
+    qInfo() << "MainWindow: following desktop" << current
+            << "on output" << (output ? output->name() : QStringLiteral("(none)"));
+
+    // Unmap and map again: the layer surface is pinned to the desktop it was
+    // first mapped on, and re-mapping puts it on the current one. Deferred by an
+    // event loop turn so the unmap is not undone before it happens.
+    setVisible(false);
+    QTimer::singleShot(0, this, [this] {
+        setVisible(true);
+        resizeWindow();
+    });
+}
+
+void MainWindow::onVirtualDesktopRemoved(const QString &id)
+{
+    // The desktop the panel sits on is gone. Forget it so the next activation
+    // re-adopts whatever is current.
+    if (id == m_desktop) {
+        m_desktop.clear();
+        onVirtualDesktopChanged();
     }
 }
 

@@ -102,6 +102,9 @@ private:
 
 private slots:
     void onPrimaryScreenChanged(QScreen *screen);
+    void onScreensChanged();
+    void onVirtualDesktopChanged();
+    void onVirtualDesktopRemoved(const QString &id);
     void onPositionChanged();
     void onIconSizeChanged();
     void onVisibilityChanged();
@@ -122,6 +125,11 @@ private:
     LayerShellQt::Window *m_layerShell;
     // The output the dock currently follows; its signals are re-bound on change.
     QPointer<QScreen> m_boundScreen;
+
+    // Id of the Plasma virtual desktop the panel is currently mapped on. A
+    // layer-shell surface belongs to the desktop it was mapped on, so the
+    // panel has to unmap and map again to follow a switch.
+    QString m_desktop;
 
     bool m_hideBlocked;
     bool m_dockHidden;
