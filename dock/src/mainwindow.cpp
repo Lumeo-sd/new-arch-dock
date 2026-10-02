@@ -19,6 +19,7 @@
 
 #include "mainwindow.h"
 
+#include "overviewmanager.h"
 #include "plasmavirtualdesktop.h"
 #include "processprovider.h"
 #include "xwindowinterface.h"
@@ -110,6 +111,7 @@ MainWindow::MainWindow(QQuickView *parent)
     engine()->rootContext()->setContextProperty("Settings", m_settings);
     engine()->rootContext()->setContextProperty("mainWindow", this);
     engine()->rootContext()->setContextProperty("trash", m_trashManager);
+    engine()->rootContext()->setContextProperty("overview", new OverviewManager(this));
 
     setSource(QUrl(QStringLiteral("qrc:/qml/main.qml")));
     setScreen(qApp->primaryScreen());

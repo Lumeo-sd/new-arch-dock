@@ -231,6 +231,19 @@ Item {
             }
         }
 
+        // Activities overview. Plasma offers no API for it, so this sends the
+        // shortcut bound to [kwin] Overview - see OverviewManager. Sits before
+        // the trash so the trash stays the last cell.
+        DockItem {
+            id: overviewItem
+            implicitWidth: isHorizontal ? root.height : root.width
+            implicitHeight: isHorizontal ? root.height : root.width
+            popupText: overview.status
+            enableActivateDot: false
+            iconName: "view-grid"
+            onClicked: overview.showOverview()
+        }
+
         DockItem {
             id: trashItem
             // The trash cell is as thick as the dock strip (= one window cell).

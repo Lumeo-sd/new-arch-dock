@@ -22,6 +22,7 @@ find_package(LayerShellQt REQUIRED)
 set(SRCS
     src/applicationitem.h
     src/applicationmodel.cpp
+    src/overviewmanager.cpp
     src/docksettings.cpp
     src/main.cpp
     src/mainwindow.cpp
