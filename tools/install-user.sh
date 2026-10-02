@@ -23,6 +23,9 @@ LIB_SUBDIR="${LIB_SUBDIR:-lib64}"
 QML_SUBDIR="${QML_SUBDIR:-$LIB_SUBDIR/qt6/qml}"
 
 PACKAGES=(
+    # A toolchain, not just cmake: on a fresh Arch install cmake alone leaves
+    # CMAKE_C_COMPILER and CMAKE_MAKE_PROGRAM unset and configure fails.
+    gcc make pkgconf
     cmake extra-cmake-modules
     qt6-base qt6-declarative qt6-shadertools qt6-tools qt6-5compat
     layer-shell-qt kwayland kwindowsystem

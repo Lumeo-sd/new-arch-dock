@@ -20,8 +20,10 @@ jobs:
       - name: Install git and build dependencies
         run: |
           pacman -Sy --noconfirm --needed git
+          # base-devel for the toolchain: archlinux:base has no compiler and no
+          # make, so cmake configure dies with CMAKE_C_COMPILER not set.
           pacman -S --noconfirm --needed \
-            cmake extra-cmake-modules \
+            base-devel cmake extra-cmake-modules \
             qt6-base qt6-declarative qt6-shadertools qt6-tools qt6-5compat \
             layer-shell-qt kwayland kwindowsystem
 
