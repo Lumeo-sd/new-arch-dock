@@ -7,40 +7,44 @@ on:
     branches: [ main ]
 
 jobs:
-  cmake-build:
-    name: CMake build (Qt6 / KF6)
+  build:
+    name: Build and install (Arch)
     runs-on: ubuntu-latest
-    container: docker.io/library/debian:sid
+    # The target is Arch/CachyOS, so build there. The package list below is the
+    # one tools/install-user.sh probes for with pacman, so CI also proves that
+    # list is complete - a Debian container needed a stubbed pacman and still
+    # could not find a LayerShellQt CMake config, because Debian's
+    # layer-shell-qt is an 8 KB metapackage with no headers in it.
+    container: archlinux:base
     steps:
+      - name: Install git and build dependencies
+        run: |
+          pacman -Sy --noconfirm --needed git
+          pacman -S --noconfirm --needed \
+            cmake extra-cmake-modules \
+            qt6-base qt6-declarative qt6-shadertools qt6-tools qt6-5compat \
+            layer-shell-qt kwayland kwindowsystem
+
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install build dependencies
+      - name: Build and install into a throwaway prefix
         run: |
-          apt-get update
-          apt-get install -y --no-install-recommends \
-            build-essential cmake ninja-build pkg-config \
-            extra-cmake-modules \
-            qt6-base-dev qt6-declarative-dev qt6-declarative-private-dev \
-            qt6-tools-dev qt6-tools-dev-tools \
-            kwayland-dev libkf6windowsystem-dev \
-            layer-shell-qt
+          chmod +x tools/install-user.sh
+          PREFIX="$PWD/stage" BUILD_DIR="$PWD/build-ci" ./tools/install-user.sh
 
-      - name: Configure fishui
+      - name: Verify the layout the dock expects at runtime
         run: |
-          cmake -S fishui -B build-fishui -G Ninja \
-                -DCMAKE_BUILD_TYPE=Release \
-                -DINSTALL_QMLDIR=/usr/lib/qt6/qml
-
-      - name: Build fishui
-        run: cmake --build build-fishui
-
-      - name: Configure dock
-        run: |
-          cmake -S dock -B build-dock -G Ninja -DCMAKE_BUILD_TYPE=Release
-
-      - name: Build dock
-        run: cmake --build build-dock
+          test -x stage/bin/cutefish-dock
+          test -f stage/lib64/qt6/qml/FishUI/qmldir
+          test -f stage/lib64/libcutefish-framework-appearance.so
+          grep -q "^Exec=$PWD/stage/bin/cutefish-dock$" stage/share/applications/cutefish-dock.desktop
+          grep -q 'X-KDE-Wayland-Interfaces=org_kde_plasma_window_management' \
+               stage/share/applications/cutefish-dock.desktop
+          # The FishUI plugin finds the appearance library through its RUNPATH,
+          # so an unresolved dependency here means an empty dock at runtime.
+          ! ldd stage/lib64/qt6/qml/FishUI/libFishUI.so | grep -q 'not found'
+          echo "layout OK"
 
       - name: qmllint
         # Informational: the QML reaches its context objects through
@@ -48,42 +52,6 @@ jobs:
         # be fixed without turning the objects into a typed QML module. Failures
         # here are a signal, not a gate.
         continue-on-error: true
-        run: /usr/lib/qt6/bin/qmllint dock/qml/*.qml || true
-
-  install-user-prefix:
-    name: Private prefix install
-    runs-on: ubuntu-latest
-    container: docker.io/library/debian:sid
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: Install build dependencies
         run: |
-          apt-get update
-          apt-get install -y --no-install-recommends \
-            build-essential cmake ninja-build pkg-config pacman-package-manager \
-            extra-cmake-modules \
-            qt6-base-dev qt6-declarative-dev qt6-declarative-private-dev \
-            qt6-tools-dev qt6-tools-dev-tools \
-            kwayland-dev libkf6windowsystem-dev \
-            layer-shell-qt
-      - name: Install into a throwaway prefix
-        run: |
-          chmod +x tools/install-user.sh
-          # The dependency probe is Arch-specific; on Debian everything above is
-          # already present, so stub pacman to "package found" and exercise the
-          # real configure/build/install path.
-          mkdir -p /tmp/stub
-          printf '#!/bin/sh\nexit 0\n' > /tmp/stub/pacman
-          chmod +x /tmp/stub/pacman
-          PATH="/tmp/stub:$PATH" PREFIX="$PWD/stage" BUILD_DIR="$PWD/build-ci" \
-            ./tools/install-user.sh
-      - name: Verify the layout the dock expects at runtime
-        run: |
-          test -x stage/bin/cutefish-dock
-          test -f "stage/lib64/qt6/qml/FishUI/qmldir"
-          test -f stage/lib64/libcutefish-framework-appearance.so
-          grep -q "^Exec=$PWD/stage/bin/cutefish-dock$" stage/share/applications/cutefish-dock.desktop
-          grep -q 'X-KDE-Wayland-Interfaces=org_kde_plasma_window_management' \
-               stage/share/applications/cutefish-dock.desktop
-          echo "layout OK"
+          qmllint=$(pacman -Ql qt6-declarative | grep -m1 '/bin/qmllint$' | cut -d' ' -f2-)
+          "$qmllint" dock/qml/*.qml || true
