@@ -3,6 +3,7 @@
 
 #include <QObject>
 #include <QString>
+#include <QStringList>
 
 // Opens the Plasma Activities overview - the desktop overview where windows can
 // be moved between desktops and new desktops added.
@@ -42,10 +43,15 @@ Q_SIGNALS:
 private:
     // What [kwin] Overview is bound to, e.g. "Meta+W". Empty when unset.
     QString configuredShortcut() const;
-    // "Meta+W" -> "super+w". Empty for a key we cannot name for ydotool.
-    static QString toYdotoolKeys(const QString &shortcut);
+    // "Meta+W" -> the ydotool keycode tokens for it. Empty for a key we cannot
+    // map. See the implementation for why keycodes and not names.
+    static QStringList toYdotoolEvents(const QString &shortcut);
     // Missing tool or missing /dev/uinput - the reason the button is dead.
     QString unavailableReason() const;
+
+    // ydotool 1.x needs its daemon; without it every call fails silently. The socket
+    // is the hidden ".ydotool_socket", the name ydotool itself reports.
+    static bool daemonRunning();
 
     bool m_uinput = false;
 };
