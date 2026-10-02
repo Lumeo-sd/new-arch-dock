@@ -1,0 +1,89 @@
+name: Build
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  cmake-build:
+    name: CMake build (Qt6 / KF6)
+    runs-on: ubuntu-latest
+    container: docker.io/library/debian:sid
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install build dependencies
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends \
+            build-essential cmake ninja-build pkg-config \
+            extra-cmake-modules \
+            qt6-base-dev qt6-declarative-dev qt6-declarative-private-dev \
+            qt6-tools-dev qt6-tools-dev-tools \
+            libkf6kwayland-dev libkf6windowsystem-dev \
+            layer-shell-qt-dev
+
+      - name: Configure fishui
+        run: |
+          cmake -S fishui -B build-fishui -G Ninja \
+                -DCMAKE_BUILD_TYPE=Release \
+                -DINSTALL_QMLDIR=/usr/lib/qt6/qml
+
+      - name: Build fishui
+        run: cmake --build build-fishui
+
+      - name: Configure dock
+        run: |
+          cmake -S dock -B build-dock -G Ninja -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build dock
+        run: cmake --build build-dock
+
+      - name: qmllint
+        # Informational: the QML reaches its context objects through
+        # setContextProperty, so qmllint reports unqualified access that cannot
+        # be fixed without turning the objects into a typed QML module. Failures
+        # here are a signal, not a gate.
+        continue-on-error: true
+        run: /usr/lib/qt6/bin/qmllint dock/qml/*.qml || true
+
+  install-user-prefix:
+    name: Private prefix install
+    runs-on: ubuntu-latest
+    container: docker.io/library/debian:sid
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Install build dependencies
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends \
+            build-essential cmake ninja-build pkg-config pacman-package-manager \
+            extra-cmake-modules \
+            qt6-base-dev qt6-declarative-dev qt6-declarative-private-dev \
+            qt6-tools-dev qt6-tools-dev-tools \
+            libkf6kwayland-dev libkf6windowsystem-dev \
+            layer-shell-qt-dev
+      - name: Install into a throwaway prefix
+        run: |
+          chmod +x tools/install-user.sh
+          # The dependency probe is Arch-specific; on Debian everything above is
+          # already present, so stub pacman to "package found" and exercise the
+          # real configure/build/install path.
+          mkdir -p /tmp/stub
+          printf '#!/bin/sh\nexit 0\n' > /tmp/stub/pacman
+          chmod +x /tmp/stub/pacman
+          PATH="/tmp/stub:$PATH" PREFIX="$PWD/stage" BUILD_DIR="$PWD/build-ci" \
+            ./tools/install-user.sh
+      - name: Verify the layout the dock expects at runtime
+        run: |
+          test -x stage/bin/cutefish-dock
+          test -f "stage/lib64/qt6/qml/FishUI/qmldir"
+          test -f stage/lib64/libcutefish-framework-appearance.so
+          grep -q "^Exec=$PWD/stage/bin/cutefish-dock$" stage/share/applications/cutefish-dock.desktop
+          grep -q 'X-KDE-Wayland-Interfaces=org_kde_plasma_window_management' \
+               stage/share/applications/cutefish-dock.desktop
+          echo "layout OK"
