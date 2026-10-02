@@ -37,12 +37,17 @@ public:
     bool available() const;
     QString status() const;
 
+    // Exposed for dock/tests/overviewparser.cpp. The dock hides itself whenever
+    // a window is maximised, which leaves the button untestable by hand at
+    // times, and the shortcut translation is the part that is easy to get
+    // quietly wrong.
+    static QStringList translatedEvents(const QString &shortcut);
+    QString configuredShortcut() const;
+
 Q_SIGNALS:
     void availableChanged();
 
 private:
-    // What [kwin] Overview is bound to, e.g. "Meta+W". Empty when unset.
-    QString configuredShortcut() const;
     // "Meta+W" -> the ydotool keycode tokens for it. Empty for a key we cannot
     // map. See the implementation for why keycodes and not names.
     static QStringList toYdotoolEvents(const QString &shortcut);

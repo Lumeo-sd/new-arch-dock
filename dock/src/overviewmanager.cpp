@@ -1,9 +1,10 @@
 #include "overviewmanager.h"
 
+#include <QDebug>
+#include <QFile>
 #include <QFileInfo>
 #include <QHash>
 #include <QProcess>
-#include <QSettings>
 #include <QStandardPaths>
 
 #include <iterator>
@@ -92,12 +93,37 @@ QString OverviewManager::status() const
 
 QString OverviewManager::configuredShortcut() const
 {
-    QSettings shortcuts(QStandardPaths::writableLocation(QStandardPaths::GenericConfigLocation)
-                            + QStringLiteral("/kglobalshortcutsrc"),
-                        QSettings::IniFormat);
-    shortcuts.beginGroup(QStringLiteral("kwin"));
-    // "Meta+W,Meta+W,Toggle Overview" - the first field is the active binding.
-    return shortcuts.value(QStringLiteral("Overview")).toString().section(QLatin1Char(','), 0, 0).trimmed();
+    // Deliberately not QSettings. kglobalaccel writes descriptions that end in a
+    // percent sign - "Decrease Volume by 1%" - and QSettings' INI parser treats
+    // "%" as an escape, so it hits a FormatError on the first of those and stops
+    // reading. Everything after it, including [kwin] Overview, comes back empty
+    // with no error of its own. The format is trivial, so read it directly.
+    QFile file(QStandardPaths::writableLocation(QStandardPaths::GenericConfigLocation)
+               + QStringLiteral("/kglobalshortcutsrc"));
+    if (!file.open(QIODevice::ReadOnly | QIODevice::Text))
+        return QString();
+
+    bool inKwin = false;
+    while (!file.atEnd()) {
+        QString line = QString::fromUtf8(file.readLine()).trimmed();
+        if (line.startsWith(QLatin1Char('#')) || line.isEmpty())
+            continue;
+        if (line.startsWith(QLatin1Char('[')) && line.endsWith(QLatin1Char(']'))) {
+            inKwin = line.mid(1, line.size() - 2) == QLatin1String("kwin");
+            continue;
+        }
+        if (!inKwin)
+            continue;
+
+        const int equals = line.indexOf(QLatin1Char('='));
+        if (equals < 0 || line.left(equals).trimmed() != QLatin1String("Overview"))
+            continue;
+
+        // "Meta+W,Meta+W,Toggle Overview" - the first field is the binding.
+        return line.mid(equals + 1).section(QLatin1Char(','), 0, 0).trimmed();
+    }
+
+    return QString();
 }
 
 QStringList OverviewManager::toYdotoolEvents(const QString &shortcut)
@@ -163,16 +189,29 @@ QStringList OverviewManager::toYdotoolEvents(const QString &shortcut)
     return events;
 }
 
+QStringList OverviewManager::translatedEvents(const QString &shortcut)
+{
+    return toYdotoolEvents(shortcut);
+}
+
 void OverviewManager::showOverview()
 {
-    if (!available())
+    // One line per press: this button is the only part of the dock whose failure
+    // is silent, and there is no API to report it to anyone else.
+    const QString reason = unavailableReason();
+    if (!reason.isEmpty()) {
+        qInfo() << "overview: unavailable -" << reason;
         return;
+    }
 
     const QStringList events = toYdotoolEvents(configuredShortcut());
-    if (events.isEmpty())
+    if (events.isEmpty()) {
+        qInfo() << "overview: cannot send the bound shortcut" << configuredShortcut();
         return;
+    }
 
     QStringList args{ QStringLiteral("key"), QStringLiteral("--key-delay=20") };
     args += events;
     QProcess::startDetached(QStandardPaths::findExecutable(QStringLiteral("ydotool")), args);
+    qInfo() << "overview: sent" << events.join(QLatin1Char(' '));
 }
