@@ -1,0 +1,44 @@
+<RCC>
+    <qresource prefix="/fishui/kit">
+        <file alias="ConfirmDialogButton.qml">controls/ConfirmDialogButton.qml</file>
+        <file alias="ConfirmDialog.qml">controls/ConfirmDialog.qml</file>
+        <file alias="AboutDialog.qml">controls/AboutDialog.qml</file>
+        <file alias="BusyIndicator.qml">controls/BusyIndicator.qml</file>
+        <file alias="PopupTips.qml">controls/PopupTips.qml</file>
+        <file alias="RoundedRect.qml">controls/RoundedRect.qml</file>
+        <file alias="Theme.qml">controls/Theme.qml</file>
+        <file alias="Toast.qml">controls/Toast.qml</file>
+        <file alias="Units.qml">controls/Units.qml</file>
+        <file alias="Window.qml">controls/Window.qml</file>
+        <file alias="RoundImageButton.qml">controls/RoundImageButton.qml</file>
+        <file alias="SegmentedControl.qml">controls/SegmentedControl.qml</file>
+        <file alias="TabBar.qml">controls/TabBar.qml</file>
+        <file alias="TabButton.qml">controls/TabButton.qml</file>
+        <file alias="TabCloseButton.qml">controls/TabCloseButton.qml</file>
+        <file alias="TabView.qml">controls/TabView.qml</file>
+        <file alias="DesktopMenu.qml">controls/DesktopMenu.qml</file>
+        <file alias="MenuSurface.qml">controls/MenuSurface.qml</file>
+        <file alias="Menu.qml">controls/Menu.qml</file>
+        <file alias="MenuItem.qml">controls/MenuItem.qml</file>
+        <file alias="MenuSeparator.qml">controls/MenuSeparator.qml</file>
+        <file>images/refresh.svg</file>
+        <file>images/icons/arrow-right.svg</file>
+        <file>images/dark/close.svg</file>
+        <file>images/dark/maximize.svg</file>
+        <file>images/dark/minimize.svg</file>
+        <file>images/dark/restore.svg</file>
+        <file>images/light/add.svg</file>
+        <file>images/dark/add.svg</file>
+        <file>images/light/close.svg</file>
+        <file>images/light/maximize.svg</file>
+        <file>images/light/minimize.svg</file>
+        <file>images/light/restore.svg</file>
+        <file>images/toast/close.svg</file>
+        <file>images/toast/error.svg</file>
+        <file>images/toast/info.svg</file>
+        <file>images/toast/success.svg</file>
+        <file>images/toast/warn.svg</file>
+        <file alias="ActionTextField.qml">controls/ActionTextField.qml</file>
+    </qresource>
+    <qresource prefix="/"/>
+</RCC>

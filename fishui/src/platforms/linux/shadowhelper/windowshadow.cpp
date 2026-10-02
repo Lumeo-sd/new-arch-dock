@@ -1,0 +1,213 @@
+#include "windowshadow.h"
+#include "waylandshadowmanager.h"
+
+#include <QScreen>
+#include <QWindow>
+
+#include <KWindowShadow>
+#include <KWindowShadowTile>
+
+WindowShadow::WindowShadow(QObject *parent) noexcept
+    : QObject(parent)
+{
+    m_updateTimer.setSingleShot(true);
+    connect(&m_updateTimer, &QTimer::timeout, this, &WindowShadow::update);
+}
+
+WindowShadow::~WindowShadow()
+{
+    clear();
+}
+
+void WindowShadow::componentComplete()
+{
+    m_complete = true;
+    scheduleUpdate();
+}
+
+void WindowShadow::setView(QWindow *view)
+{
+    if (m_view == view)
+        return;
+
+    if (m_view)
+        m_view->disconnect(this);
+
+    clear();
+    m_view = view;
+
+    if (m_view) {
+        // Qt tears the wl_surface down when the window is hidden, and the
+        // KWindowShadow implementation recreates it on the next expose.
+        connect(m_view, &QWindow::visibleChanged, this, &WindowShadow::scheduleUpdate);
+        connect(m_view, &QWindow::screenChanged, this, [this] {
+            watchScreen();
+            scheduleUpdate();
+        });
+    }
+
+    watchScreen();
+
+    emit viewChanged();
+    scheduleUpdate();
+}
+
+QWindow *WindowShadow::view() const
+{
+    return m_view;
+}
+
+void WindowShadow::watchScreen()
+{
+    QScreen *screen = m_view ? m_view->screen() : nullptr;
+
+    if (m_screen == screen)
+        return;
+
+    if (m_screen)
+        m_screen->disconnect(this);
+
+    m_screen = screen;
+
+    if (!m_screen)
+        return;
+
+    // The tiles are rendered for one device pixel ratio. Changing the scale of
+    // an output does not move the window to another screen, so
+    // QWindow::screenChanged never fires: without this the shadow would keep
+    // the resolution it was first drawn at and the compositor would scale the
+    // tiles up into a blurred smear.
+    connect(m_screen, &QScreen::physicalDotsPerInchChanged, this, &WindowShadow::scheduleUpdate);
+    connect(m_screen, &QScreen::geometryChanged, this, &WindowShadow::scheduleUpdate);
+}
+
+void WindowShadow::setRadius(qreal value)
+{
+    if (m_radius == value)
+        return;
+    m_radius = value;
+    emit radiusChanged();
+    scheduleUpdate();
+}
+
+void WindowShadow::setStrength(qreal strength)
+{
+    if (m_strength == strength)
+        return;
+    m_strength = strength;
+    emit strengthChanged();
+    scheduleUpdate();
+}
+
+void WindowShadow::setEnabled(bool enabled)
+{
+    if (m_enabled == enabled)
+        return;
+
+    m_enabled = enabled;
+    emit enabledChanged();
+    if (!m_enabled)
+        clear();
+    scheduleUpdate();
+}
+
+void WindowShadow::setGeometry(const QRect &geometry)
+{
+    if (m_geometry == geometry)
+        return;
+
+    // Legacy CutefishOS dock API: the dock QML binds a rectangle that tracked
+    // the panel's position and size. The Wayland shadow tiles are anchored to
+    // the window's own surface and move with it, so the value is not used
+    // anymore. Storing it keeps the property self-consistent.
+    m_geometry = geometry;
+    emit geometryChanged();
+}
+
+void WindowShadow::scheduleUpdate()
+{
+    if (!m_updateTimer.isActive())
+        m_updateTimer.start();
+}
+
+void WindowShadow::clear()
+{
+    if (m_shadow) {
+        m_shadow->destroy();
+        delete m_shadow;
+    }
+    m_shadow = nullptr;
+    m_tileScale = 0;
+    m_tileRadius = 0;
+    m_tileStrength = 0;
+}
+
+void WindowShadow::update()
+{
+    if (!m_complete || !m_view)
+        return;
+
+    if (!m_enabled || !m_view->isVisible()) {
+        clear();
+        return;
+    }
+
+    WaylandShadowManager *manager = WaylandShadowManager::instance();
+    if (!manager->isValid() || m_radius <= 0)
+        return;
+
+    // KWin maps a shadow tile's pixels 1:1 onto *logical* pixels and never
+    // looks at the buffer scale, so tiles have to be rendered at one pixel per
+    // logical pixel. A hidpi tile set makes the shadow twice as wide as the
+    // padding claims; KWin then squashes the corner tiles to fit the window and
+    // the shadow all but vanishes at 200%.
+    const qreal scale = 1.0;
+
+    // Already up to date.
+    if (m_shadow
+            && qFuzzyCompare(m_tileScale, scale)
+            && qFuzzyCompare(m_tileRadius, m_radius)
+            && qFuzzyCompare(m_tileStrength, m_strength)) {
+        return;
+    }
+
+    // Render the replacement before the old shadow goes away. Dropping a
+    // shadow tells the compositor to repaint the window without one, so the
+    // window would be drawn flat for as long as it takes to get the new tiles
+    // over the wire - one visible frame every time the window is focused,
+    // which is what made an opening window blink.
+    const ShadowTiles &tiles = manager->tiles(m_radius, m_strength, scale);
+    if (!tiles.isValid())
+        return;
+
+    // From here on nothing returns to the event loop, so the window is never
+    // committed without a shadow.
+    clear();
+
+    m_shadow = new KWindowShadow(this);
+    m_shadow->setWindow(m_view);
+
+    const auto createTile = [](const QImage &image) {
+        auto tile = KWindowShadowTile::Ptr::create();
+        tile->setImage(image);
+        return tile;
+    };
+
+    m_shadow->setTopLeftTile(createTile(tiles.tiles[0]));
+    m_shadow->setTopTile(createTile(tiles.tiles[1]));
+    m_shadow->setTopRightTile(createTile(tiles.tiles[2]));
+    m_shadow->setRightTile(createTile(tiles.tiles[3]));
+    m_shadow->setBottomRightTile(createTile(tiles.tiles[4]));
+    m_shadow->setBottomTile(createTile(tiles.tiles[5]));
+    m_shadow->setBottomLeftTile(createTile(tiles.tiles[6]));
+    m_shadow->setLeftTile(createTile(tiles.tiles[7]));
+    m_shadow->setPadding(tiles.offsets);
+
+    if (m_shadow->create()) {
+        m_tileScale = scale;
+        m_tileRadius = m_radius;
+        m_tileStrength = m_strength;
+    } else {
+        clear();
+    }
+}

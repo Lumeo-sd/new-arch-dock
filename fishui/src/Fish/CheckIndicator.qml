@@ -1,0 +1,126 @@
+/****************************************************************************
+**
+** Copyright (C) 2017 The Qt Company Ltd.
+** Contact: http://www.qt.io/licensing/
+**
+** This file is part of the Qt Quick Controls 2 module of the Qt Toolkit.
+**
+** $QT_BEGIN_LICENSE:LGPL3$
+** Commercial License Usage
+** Licensees holding valid commercial Qt licenses may use this file in
+** accordance with the commercial license agreement provided with the
+** Software or, alternatively, in accordance with the terms contained in
+** a written agreement between you and The Qt Company. For licensing terms
+** and conditions see http://www.qt.io/terms-conditions. For further
+** information use the contact form at http://www.qt.io/contact-us.
+**
+** GNU Lesser General Public License Usage
+** Alternatively, this file may be used under the terms of the GNU Lesser
+** General Public License version 3 as published by the Free Software
+** Foundation and appearing in the file LICENSE.LGPLv3 included in the
+** packaging of this file. Please review the following information to
+** ensure the GNU Lesser General Public License version 3 requirements
+** will be met: https://www.gnu.org/licenses/lgpl.html.
+**
+** GNU General Public License Usage
+** Alternatively, this file may be used under the terms of the GNU
+** General Public License version 2.0 or later as published by the Free
+** Software Foundation and appearing in the file LICENSE.GPL included in
+** the packaging of this file. Please review the following information to
+** ensure the GNU General Public License version 2.0 requirements will be
+** met: http://www.gnu.org/licenses/gpl-2.0.html.
+**
+** $QT_END_LICENSE$
+**
+****************************************************************************/
+
+import QtQuick
+import QtQuick.Controls
+import QtQuick.Controls.impl
+
+import FishUI 1.0 as FishUI
+
+Rectangle {
+    id: indicatorItem
+    implicitWidth: 18
+    implicitHeight: 18
+
+    color: !control.enabled ? control.FishUI.Theme.secondBackgroundColor
+                            : checked ? FishUI.Theme.highlightColor : control.FishUI.Theme.secondBackgroundColor
+    border.color: !control.enabled ? control.FishUI.Theme.disabledTextColor
+        : checked ? control.FishUI.Theme.highlightColor: control.FishUI.Theme.textColor
+    border.width: 1
+    radius: control.autoExclusive ? Math.min(height, width) : 4
+
+    property Item control
+    property bool checked : control.checked
+
+    Behavior on border.width {
+        NumberAnimation {
+            duration: 100
+            easing.type: Easing.InOutCubic
+        }
+    }
+
+    Behavior on border.color {
+        ColorAnimation {
+            duration: 100
+            easing.type: Easing.InOutCubic
+        }
+    }   
+
+    // Qt 6 no longer ships the Material style's check.png resource,
+    // so the check mark is drawn directly.
+    Canvas {
+        id: checkImage
+        width: parent.height * 0.6
+        height: parent.height * 0.6
+        anchors.centerIn: parent
+
+        property color strokeColor: !indicatorItem.control.enabled
+                                    ? indicatorItem.control.FishUI.Theme.disabledTextColor
+                                    : indicatorItem.control.FishUI.Theme.highlightedTextColor
+
+        onStrokeColorChanged: requestPaint()
+
+        onPaint: {
+            var ctx = getContext("2d")
+            ctx.reset()
+            ctx.strokeStyle = strokeColor
+            ctx.lineWidth = Math.max(1.5, width * 0.16)
+            ctx.lineCap = "round"
+            ctx.lineJoin = "round"
+            ctx.beginPath()
+            ctx.moveTo(width * 0.18, height * 0.52)
+            ctx.lineTo(width * 0.42, height * 0.75)
+            ctx.lineTo(width * 0.84, height * 0.25)
+            ctx.stroke()
+        }
+
+        scale: checked ? 1 : 0
+        Behavior on scale {
+            NumberAnimation {
+                duration: 100
+                easing.type: Easing.InOutCubic
+            }
+        }
+    }
+
+    transitions: Transition {
+        SequentialAnimation {
+            NumberAnimation {
+                target: indicatorItem
+                property: "scale"
+                // Go down 2 pixels in size.
+                to: 1 - 2 / indicatorItem.width
+                duration: 120
+            }
+            NumberAnimation {
+                target: indicatorItem
+                property: "scale"
+                to: 1
+                duration: 120
+            }
+        }
+    }
+}

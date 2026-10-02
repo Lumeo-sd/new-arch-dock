@@ -1,0 +1,16 @@
+[Desktop Entry]
+Type=Application
+Name=Cutefish Dock
+Name[uk]=Панель Cutefish
+Comment=Cutefish OS dock
+Comment[uk]=Панель застосунків Cutefish
+# KWin authorizes this protocol (window tracking for task managers) only for
+# clients that declare it in their desktop file. See KWin's wayland_server.cpp
+# allowInterface() and the X-KDE-Wayland-Interfaces permission model.
+# The path is substituted at configure time and must match the installed binary:
+# KWin resolves the client through the canonical Exec.
+Exec=@CMAKE_INSTALL_FULL_BINDIR@/cutefish-dock
+Icon=cutefish-dock
+Terminal=false
+Categories=Utility;System;
+X-KDE-Wayland-Interfaces=org_kde_plasma_window_management

@@ -1,0 +1,60 @@
+/*
+ * Copyright (C) 2021 CutefishOS Team.
+ *
+ * Author:     revenmartin <revenmartin@gmail.com>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+import QtQuick 2.12
+import QtQuick.Window 2.3
+import QtQuick.Controls 2.12
+import Qt5Compat.GraphicalEffects
+
+import FishUI 1.0 as FishUI
+
+Item {
+    id: control
+
+    property real radius: FishUI.Theme.smallRadius
+    property var color: FishUI.Theme.backgroundColor
+    property bool borderEnabled: true
+
+    property bool animationEnabled: true
+    property alias backgroundOpacity: _background.opacity
+
+    // Background and border are one Rectangle on purpose: a separate
+    // transparent-fill ring on top of the background is two antialiased
+    // rounded shapes, and along the corner arc their feathers cancel so the
+    // hairline never reaches full opacity.
+    Rectangle {
+        id: _background
+        anchors.fill: parent
+        color: control.color
+        radius: control.radius
+        antialiasing: true
+        smooth: true
+
+        border.width: control.borderEnabled ? 1 / FishUI.Dpi.ratio : 0
+        border.pixelAligned: FishUI.Dpi.ratio <= 1
+        border.color: FishUI.Theme.darkMode ? Qt.rgba(1, 1, 1, 0.1) : Qt.rgba(0, 0, 0, 0.1)
+
+        Behavior on color {
+            ColorAnimation {
+                duration: control.animationEnabled ? 200 : 0
+                easing.type: Easing.Linear
+            }
+        }
+    }
+}
