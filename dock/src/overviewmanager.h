@@ -3,30 +3,29 @@
 
 #include <QObject>
 #include <QString>
-#include <QStringList>
 
 // Opens the Plasma Activities overview - the desktop overview where windows can
 // be moved between desktops and new desktops added.
 //
-// Plasma exposes no API for it. KWin 6 has no /Overview object, the KWin
-// scripting API never mentions it, and org.kde.kglobalaccel has no
-// invokeShortcut, so a client cannot ask KWin to open it and cannot ask
-// kglobalaccel to replay the shortcut either.
+// Plasma has no direct API for it: KWin 6 has no /Overview object and the KWin
+// scripting API never mentions it. What does exist is the global accelerator
+// daemon, which can replay any shortcut a component registered under a unique
+// name:
 //
-// The only thing that does work is sending the key the user configured for it
-// ([kwin] Overview in kglobalshortcutsrc, "Meta+W" by default). ydotool injects
-// that through /dev/uinput, which is below the compositor, so KWin receives it
-// exactly as if the user had pressed it - and unlike xdotool this works on
-// Wayland, because nothing X11 is involved.
+//   org.kde.kglobalaccel /component/kwin
+//       org.kde.kglobalaccel.Component.invokeShortcut("Overview")
 //
-// When ydotool is not installed the button stays in place and says why in its
-// tooltip instead of failing silently. Run tools/enable-overview-button.sh.
+// Asking kglobalaccel rather than sending key events matters because it
+// resolves the name against the live binding: reassigning Overview in KDE
+// System Settings keeps working, with no config file to parse and no keycode
+// translation to get wrong. It also needs no helper daemon, no /dev/uinput and
+// no privileged access.
 class OverviewManager : public QObject
 {
     Q_OBJECT
     // True when pressing the button would do something.
     Q_PROPERTY(bool available READ available NOTIFY availableChanged)
-    // The button's tooltip: the shortcut it will send, or what is missing.
+    // The button's tooltip: what it opens, or why it cannot.
     Q_PROPERTY(QString status READ status NOTIFY availableChanged)
 
 public:
@@ -37,28 +36,19 @@ public:
     bool available() const;
     QString status() const;
 
-    // Exposed for dock/tests/overviewparser.cpp. The dock hides itself whenever
-    // a window is maximised, which leaves the button untestable by hand at
-    // times, and the shortcut translation is the part that is easy to get
-    // quietly wrong.
-    static QStringList translatedEvents(const QString &shortcut);
-    QString configuredShortcut() const;
-
 Q_SIGNALS:
     void availableChanged();
 
 private:
-    // "Meta+W" -> the ydotool keycode tokens for it. Empty for a key we cannot
-    // map. See the implementation for why keycodes and not names.
-    static QStringList toYdotoolEvents(const QString &shortcut);
-    // Missing tool or missing /dev/uinput - the reason the button is dead.
-    QString unavailableReason() const;
+    // Whether kglobalaccel owns a component object for kwin on the session bus.
+    static bool serviceRegistered();
 
-    // ydotool 1.x needs its daemon; without it every call fails silently. The socket
-    // is the hidden ".ydotool_socket", the name ydotool itself reports.
-    static bool daemonRunning();
+    // Re-checks the service. kglobalaccel is registered by the session, so it
+    // can well appear after the dock does.
+    void refreshAvailability();
 
-    bool m_uinput = false;
+    bool m_available = false;
+    QString m_reason;
 };
 
 #endif // OVERVIEWMANAGER_H

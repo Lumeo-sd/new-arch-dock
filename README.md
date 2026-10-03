@@ -15,6 +15,9 @@ Launcher і statusbar із повного порту CutefishOS сюди не в
 - перемикання теми світла/темна разом з Plasma
 - панель слідує за активним віртуальним десктопом (Activity) і переїжджає разом
   з ним, прив'язана до конкретного виходу
+- кнопка Activities overview одразу за лаунчером: відкриває огляд робочого
+  столу через `org.kde.kglobalaccel` (`invokeShortcut "Overview"`), тож працює
+  і після перепризначення клавіші в KDE System Settings
 - D-Bus API: сервіс `com.cutefish.Dock`, об'єкт `/Dock`
 
 ## Вимоги
@@ -23,11 +26,15 @@ Arch-подібні (перевірено на CachyOS, Plasma 6.7.5, Qt 6.11.2,
 
 ```bash
 sudo pacman -S --needed cmake extra-cmake-modules \
-  qt6-base qt6-declarative qt6-shadertools qt6-tools qt6-5compat \
+  qt6-base qt6-declarative qt6-shadertools qt6-tools qt6-5compat qt6-tools \
   layer-shell-qt kwayland kwindowsystem
 ```
 
 Скрипт перевіряє ці залежності сам і надрукує команду, якої не вистачає.
+
+Кнопці Overview не потрібно нічого встановлювати: вона йде через
+`org.kde.kglobalaccel`, який уже є в будь-якому Plasma. Жодного демона,
+`/dev/uinput` чи читання `kglobalshortcutsrc`.
 
 ## Збірка та встановлення
 
@@ -91,6 +98,9 @@ sudo PREFIX=/usr ./tools/install-user.sh
 - **`X-KDE-Wayland-Interfaces`** у desktop-файлі — приватний runtime-контракт
   KWin. Працює на 6.7.5, але зламається при оновленні KWin. Правильний шлях —
   `PW::LibTaskManager`, як у Krema.
+- **Анімація появи після Activities Overview** належить KWin: він ховає й
+  показує layer-поверхню панелі, не повідомляючи клієнта. Зсередини dock-а це
+  не керується.
 - **Launcher і statusbar** у цей порт не входять.
 
 ## Ліцензія та походження
