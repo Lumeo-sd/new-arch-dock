@@ -738,6 +738,12 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *e)
 
 void MainWindow::resizeEvent(QResizeEvent *e)
 {
+    // The compositor can resize a layer surface on its own, and that never
+    // reaches resizeWindow(), so log it here or a compositor-driven change is
+    // indistinguishable from the window never moving.
+    qCDebug(lcLifecycle) << "resizeEvent" << e->oldSize() << "->" << e->size()
+            << "at" << geometry();
+
     emit primaryGeometryChanged();
 
     QQuickView::resizeEvent(e);
