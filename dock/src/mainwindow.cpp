@@ -25,11 +25,6 @@
 #include "xwindowinterface.h"
 #include "dockadaptor.h"
 
-// Per-mouse-move tracing. main.cpp turns this category's debug level off
-// unless QT_LOGGING_RULES says otherwise; enable with
-//   QT_LOGGING_RULES="cutefish.dock.lifecycle.debug=true"
-Q_LOGGING_CATEGORY(lcLifecycle, "cutefish.dock.lifecycle")
-
 #include <QGuiApplication>
 #include <QLoggingCategory>
 #include <QScreen>
@@ -73,7 +68,6 @@ MainWindow::MainWindow(QQuickView *parent)
         setGeometry(v.toRect());
     });
     connect(m_resizeAnimation, &QVariantAnimation::finished, this, [this]() {
-        qCDebug(lcLifecycle) << "resize finished" << geometry().width() << "x" << geometry().height();
         updateLayerShell();
         XWindowInterface::instance()->setPanelWindow(this);
     });
@@ -105,6 +99,11 @@ MainWindow::MainWindow(QQuickView *parent)
     // are unaffected by this setting.
     m_layerShell->setKeyboardInteractivity(LayerShellQt::Window::KeyboardInteractivityNone);
     m_layerShell->setLayer(LayerShellQt::Window::LayerTop);
+    // KWin derives a layer surface's window type only from its namespace, and
+    // only "dock" maps to a Dock. Any other value makes this a normal window,
+    // which KWin shows and hides with its own panel animation when the
+    // Activities Overview closes (the dock appears to drop in).
+    m_layerShell->setScope(QStringLiteral("dock"));
 
     engine()->rootContext()->setContextProperty("appModel", m_appModel);
     engine()->rootContext()->setContextProperty("process", new ProcessProvider(this));
@@ -378,8 +377,6 @@ void MainWindow::resizeWindow()
 {
     // Keep the edge strip while the panel is hidden: a geometry refresh (new
     // app, icon size change, ...) must not re-expand an invisible panel.
-    qCDebug(lcLifecycle) << "resizeWindow() hidden=" << m_dockHidden
-            << "cur=" << geometry();
     QRect end = m_dockHidden ? stripRect() : windowRect();
 
     // Animate instead of snapping so e.g. an unpin re-centering glides instead
@@ -695,10 +692,8 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *e)
 {
     switch (e->type()) {
     case QEvent::MouseButtonPress:
-        qCDebug(lcLifecycle) << "evfilter: press hidden=" << m_dockHidden;
         break;
     case QEvent::Enter:
-        qCDebug(lcLifecycle) << "evfilter: enter hidden=" << m_dockHidden;
         m_hideTimer->stop();
         m_hideBlocked = true;
 
@@ -707,7 +702,6 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *e)
             m_showTimer->start();
         break;
     case QEvent::Leave:
-        qCDebug(lcLifecycle) << "evfilter: leave hidden=" << m_dockHidden;
         m_hideBlocked = false;
 
         // The auto-hide timer only applies to the hiding visibilities; the
@@ -738,12 +732,6 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *e)
 
 void MainWindow::resizeEvent(QResizeEvent *e)
 {
-    // The compositor can resize a layer surface on its own, and that never
-    // reaches resizeWindow(), so log it here or a compositor-driven change is
-    // indistinguishable from the window never moving.
-    qCDebug(lcLifecycle) << "resizeEvent" << e->oldSize() << "->" << e->size()
-            << "at" << geometry();
-
     emit primaryGeometryChanged();
 
     QQuickView::resizeEvent(e);
