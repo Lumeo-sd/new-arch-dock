@@ -34,6 +34,8 @@ const Keycode kNamed[] = {
     { "pageup", 104 },    { "page_up", 104 }, { "pagedown", 109 }, { "page_down", 109 },
 };
 
+
+
 int lookup(const Keycode *table, std::size_t count, const QString &name)
 {
     for (std::size_t i = 0; i < count; ++i) {
@@ -212,6 +214,19 @@ void OverviewManager::showOverview()
 
     QStringList args{ QStringLiteral("key"), QStringLiteral("--key-delay=20") };
     args += events;
-    QProcess::startDetached(QStandardPaths::findExecutable(QStringLiteral("ydotool")), args);
-    qInfo() << "overview: sent" << events.join(QLatin1Char(' '));
+
+    // Deliberately not startDetached: that only reports that the child was
+    // spawned, and ydotool failing to reach its daemon is silent. Keeping the
+    // process lets its exit code and stderr say whether the key was delivered.
+    const QString ydotool = QStandardPaths::findExecutable(QStringLiteral("ydotool"));
+    auto *yd = new QProcess(this);
+    connect(yd, &QProcess::finished, this, [yd, events](int code, QProcess::ExitStatus status) {
+        const QString error = QString::fromUtf8(yd->readAllStandardError()).trimmed();
+        qInfo() << "overview: ydotool finished" << events.join(QLatin1Char(' '))
+                << "exit" << code << (status == QProcess::CrashExit ? "(crashed)" : "(normal)") << error;
+        yd->deleteLater();
+    });
+    yd->start(ydotool, args);
+    if (!yd->waitForStarted(500))
+        qInfo() << "overview: ydotool failed to start" << yd->errorString();
 }

@@ -240,7 +240,10 @@ Item {
             implicitHeight: isHorizontal ? root.height : root.width
             popupText: overview.status
             enableActivateDot: false
-            iconName: "view-grid"
+            // "computer" rather than "view-grid": the latter ships only in the
+            // 16/22/24 breeze actions, and at a 53 px cell Qt looks for a size
+            // that is not there, which renders an empty cell.
+            iconName: "computer"
             onClicked: overview.showOverview()
         }
 
