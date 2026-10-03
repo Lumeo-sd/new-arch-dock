@@ -184,22 +184,6 @@ Item {
         columnSpacing: 0
         rowSpacing: 0
 
-        // Activities overview. Plasma offers no API for it, so this sends the
-        // shortcut bound to [kwin] Overview - see OverviewManager. It sits
-        // before the app list, which puts it left of the launcher.
-        DockItem {
-            id: overviewItem
-            implicitWidth: isHorizontal ? root.height : root.width
-            implicitHeight: isHorizontal ? root.height : root.width
-            popupText: overview.status
-            enableActivateDot: false
-            // "computer" rather than "view-grid": the latter ships only in the
-            // 16/22/24 breeze actions, and at a 53 px cell Qt looks for a size
-            // that is not there, which renders an empty cell.
-            iconName: "computer"
-            onClicked: overview.showOverview()
-        }
-
         ListView {
             id: appItemView
             orientation: isHorizontal ? Qt.Horizontal : Qt.Vertical

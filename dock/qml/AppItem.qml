@@ -31,7 +31,10 @@ DockItem {
     iconName: model.dropSlot ? "" : (model.iconName ? model.iconName : "application-x-desktop")
     showIcon: !model.dropSlot
     isActive: model.isActive
-    popupText: model.dropSlot ? "" : model.visibleName
+    // The overview row's tooltip says what pressing it will do (the bound
+    // shortcut), or what is missing, instead of its plain name.
+    popupText: model.dropSlot ? ""
+                : (model.appId === "cutefish-overview" ? overview.status : model.visibleName)
     enableActivateDot: !model.dropSlot && windowCount !== 0
     draggable: !model.fixed
     dragItemIndex: index
@@ -53,9 +56,17 @@ DockItem {
 
     onPositionChanged: updateGeometry()
     onPressed: updateGeometry()
-    onRightClicked: if (model.appId !== "cutefish-launcher") contextMenu.show()
+    onRightClicked: if (model.appId !== "cutefish-launcher" && model.appId !== "cutefish-overview") contextMenu.show()
 
     onClicked: function(mouse) {
+        // The overview row is not an application: it has no desktop entry and
+        // nothing to launch, so it goes straight to OverviewManager.
+        if (model.appId === "cutefish-overview") {
+            if (mouse.button === Qt.LeftButton)
+                overview.showOverview()
+            return
+        }
+
         if (mouse.button === Qt.LeftButton)
             appModel.clicked(model.appId)
         else if (mouse.button === Qt.MiddleButton)

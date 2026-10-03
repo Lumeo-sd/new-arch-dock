@@ -627,6 +627,20 @@ void ApplicationModel::initPinnedApplications()
     item->fixed = true;
     m_appItems.append(item);
 
+    // Activities overview. It lives in the model rather than as a standalone
+    // cell in main.qml because it has to sit *after* the launcher, and the
+    // launcher is model index 0 - the only thing that can follow it is another
+    // model row. Fixed, like the launcher, so it cannot be dragged away.
+    // "computer" rather than "view-grid": the latter ships only in the 16/22/24
+    // breeze actions, and at a 53 px cell Qt looks for a size that is not
+    // there, which renders an empty cell.
+    ApplicationItem *overviewItem = new ApplicationItem;
+    overviewItem->id = "cutefish-overview";
+    overviewItem->iconName = "computer";
+    overviewItem->visibleName = tr("Activities overview");
+    overviewItem->fixed = true;
+    m_appItems.append(overviewItem);
+
     // Pinned Apps
     for (int i = 0; i < groups.size(); ++i) {
         for (const QString &id : groups) {
