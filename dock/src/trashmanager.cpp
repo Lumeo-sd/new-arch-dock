@@ -96,9 +96,20 @@ void TrashManager::emptyTrash()
 
 void TrashManager::openTrash()
 {
-    // Fall back to kioclient6, which opens a URL with the default handler.
-    if (!QProcess::startDetached("cutefish-filemanager", QStringList() << "trash:///"))
-        QProcess::startDetached("kioclient6", QStringList() << "exec" << QStringLiteral("trash:/"));
+    // CutefishOS shipped its own file manager; it is not present on Plasma, so
+    // fall through to Dolphin. Note QDesktopServices::openUrl() is NOT usable
+    // here: on Plasma 6 it hands trash:/ to xdg-open, which looks for
+    // kfmclient (a KDE 4 binary that no longer exists) and fails silently
+    // while still returning true.
+    if (QProcess::startDetached("cutefish-filemanager", QStringList() << "trash:///"))
+        return;
+
+    if (QProcess::startDetached("dolphin", QStringList() << QStringLiteral("trash:/")))
+        return;
+
+    // kioclient takes the URL as an argument on KDE 6 too (it was "kioclient6"
+    // upstream, a binary that Plasma 6 does not ship).
+    QProcess::startDetached("kioclient", QStringList() << QStringLiteral("trash:/"));
 }
 
 void TrashManager::onDirectoryChanged()
