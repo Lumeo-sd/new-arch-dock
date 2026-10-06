@@ -1,0 +1,61 @@
+cmake_minimum_required(VERSION 3.5)
+
+set(PROJECT_NAME cutefish-launcher)
+project(${PROJECT_NAME})
+
+set(CMAKE_INCLUDE_CURRENT_DIR ON)
+set(CMAKE_AUTOUIC ON)
+set(CMAKE_AUTOMOC ON)
+set(CMAKE_AUTORCC ON)
+set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+include(GNUInstallDirs)
+
+set(QT Core Widgets DBus Quick QuickControls2 LinguistTools)
+find_package(Qt6 REQUIRED ${QT})
+
+set(SRCS
+    src/desktopproperties.cpp
+    src/iconthemeimageprovider.cpp
+    src/launcher.cpp
+    src/launchermodel.cpp
+    src/appitem.cpp
+    src/main.cpp
+    src/pagemodel.cpp
+    src/ucunits.cpp
+    src/listmodelmanager.cpp
+    src/iconitem.cpp
+    src/processprovider.cpp
+    src/appmanager.cpp
+)
+
+set(RESOURCES
+    qml.qrc
+)
+
+qt6_add_dbus_adaptor(DBUS_SRCS
+    src/com.cutefish.Launcher.xml
+    src/launcher.h
+    Launcher
+    launcheradaptor
+    LauncherAdaptor
+)
+set_source_files_properties(${DBUS_SRCS} PROPERTIES SKIP_AUTOGEN ON)
+
+add_executable(${PROJECT_NAME} ${SRCS} ${DBUS_SRCS} ${RESOURCES})
+target_link_libraries(${PROJECT_NAME}
+        Qt6::Core
+        Qt6::Widgets
+        Qt6::DBus
+        Qt6::Quick
+        Qt6::QuickControls2
+)
+
+file(GLOB TS_FILES translations/*.ts)
+qt6_add_translation(QM_FILES ${TS_FILES})
+add_custom_target(translations DEPENDS ${QM_FILES} SOURCES ${TS_FILES})
+add_dependencies(${PROJECT_NAME} translations)
+
+install(TARGETS ${PROJECT_NAME} RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+install(FILES ${QM_FILES} DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/translations)

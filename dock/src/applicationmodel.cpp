@@ -613,15 +613,29 @@ int ApplicationModel::indexOf(const QString &id)
 void ApplicationModel::initPinnedApplications()
 {
     QSettings settings(QSettings::UserScope, "cutefishos", "dock_pinned");
-    QSettings systemSettings("/etc/cutefish-dock-list.conf", QSettings::IniFormat);
+    // The default list is configured into the install prefix: a private
+    // ~/.local install lands in <prefix>/etc, while PREFIX=/usr lands in the
+    // real /etc (GNUInstallDirs special-cases /usr). Keep /etc as a fallback
+    // for builds that predate the definition.
+#ifdef CUTEFISH_DOCK_LIST_CONF
+    QString systemList = QStringLiteral(CUTEFISH_DOCK_LIST_CONF);
+    if (!QFile::exists(systemList))
+        systemList = QStringLiteral("/etc/cutefish-dock-list.conf");
+#else
+    QString systemList = QStringLiteral("/etc/cutefish-dock-list.conf");
+#endif
+    QSettings systemSettings(systemList, QSettings::IniFormat);
     QSettings *set = (QFile(settings.fileName()).exists()) ? &settings
                                                            : &systemSettings;
     QStringList groups = set->childGroups();
 
-    // Launcher
+    // Launcher. "--show" makes a cold spawn display the grid immediately; a
+    // warm spawn finds the D-Bus name taken and makes the running instance
+    // toggle instead (see Launcher::main), so one exec line serves both the
+    // first click and every click after it.
     ApplicationItem *item = new ApplicationItem;
     item->id = "cutefish-launcher";
-    item->exec = "cutefish-launcher";
+    item->exec = "cutefish-launcher --show";
     item->iconName = "qrc:/images/launcher.svg";
     item->visibleName = tr("Launcher");
     item->fixed = true;

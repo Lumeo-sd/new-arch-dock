@@ -56,6 +56,10 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
         Plasma::KWaylandClient
         LayerShellQt::Interface
 )
+# Where the fallback system app list (cutefish-dock-list.conf) is installed:
+# $PREFIX/etc for a private prefix, /etc for PREFIX=/usr (GNUInstallDirs).
+target_compile_definitions(${PROJECT_NAME} PRIVATE
+        CUTEFISH_DOCK_LIST_CONF="${CMAKE_INSTALL_FULL_SYSCONFDIR}/cutefish-dock-list.conf")
 
 file(GLOB TS_FILES translations/*.ts)
 qt6_add_translation(QM_FILES ${TS_FILES})

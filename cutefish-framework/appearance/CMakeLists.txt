@@ -61,5 +61,13 @@ if(PROJECT_NAME STREQUAL "CutefishFramework" OR CUTEFISH_INSTALL_APPEARANCE)
         Qt6::Qml
     )
 
+    # FishUI's plugin reads $ORIGIN/../../.. because FishUI sits at
+    # qml/FishUI (one component deep). This plugin lives at
+    # qml/Cutefish/Appearance — two components — so the same formula lands in
+    # .../qt6/lib64 and libcutefish-framework-appearance.so is not found at
+    # launch. Four components up reaches the prefix's lib64 for real.
+    set_target_properties(cutefish-framework-appearance-qml PROPERTIES
+        INSTALL_RPATH "$ORIGIN/../../../..")
+
     cutefish_install_qml_module(cutefish-framework-appearance-qml)
 endif()

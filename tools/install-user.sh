@@ -109,7 +109,19 @@ cmake --build "$BUILD_DIR/dock" -j"$(nproc)"
 echo "==> installing dock"
 cmake --install "$BUILD_DIR/dock"
 
-# 3. autostart. The Exec path has to match the installed binary exactly: KWin
+# 3. launcher - the dock's leftmost, fixed cell starts cutefish-launcher --show.
+echo "==> configuring launcher"
+cmake -S "$REPO_ROOT/launcher" -B "$BUILD_DIR/launcher" \
+      -DCMAKE_BUILD_TYPE="$BUILD_TYPE" \
+      -DCMAKE_INSTALL_PREFIX="$PREFIX"
+
+echo "==> building launcher"
+cmake --build "$BUILD_DIR/launcher" -j"$(nproc)"
+
+echo "==> installing launcher"
+cmake --install "$BUILD_DIR/launcher"
+
+# 4. autostart. The Exec path has to match the installed binary exactly: KWin
 #    resolves the client through the canonical Exec when deciding whether to
 #    hand out org_kde_plasma_window_management.
 mkdir -p "$HOME/.config/autostart"

@@ -1,10 +1,11 @@
-# new-arch-dock
+# cutefish-dock-kde
 
 Панель завдань у стилі CutefishOS для KDE Plasma 6 на Wayland. Qt6/KF6, без
 X11, без `NET::Dock` і без сторонніх залежностей поза Qt та KDE Frameworks.
 
-Це мінімальний робочий порт: лише те, з чого збирається й запускається dock.
-Launcher і statusbar із повного порту CutefishOS сюди не входять.
+Це мінімальний робочий порт: dock + launcher + fishui/appearance.
+Statusbar із повного порту CutefishOS сюди не входить (він — окремий
+проєкт `cutefish-statusbar-kde`, верхня панель як у Lingmo).
 
 ## Що вміє
 
@@ -68,9 +69,13 @@ sudo PREFIX=/usr ./tools/install-user.sh
 | Каталог | Роль |
 |---|---|
 | `dock/` | сам dock: C++ + QML, LayerShellQt, KWayland |
+| `launcher/` | сітка застосунків (D-Bus `com.cutefish.Launcher`, живе постійно, тоглиться кнопкою dock) |
 | `fishui/` | QML-фреймворк Cutefish: теми, вікна, підказки; у ньому збирається `cutefish-framework/appearance` |
 | `cutefish-framework/appearance/` | бібліотека запиту теми в Plasma |
 | `tools/install-user.sh` | збірка + встановлення у приватний префікс |
+| `docs/` | журнал міграції порту (`STEP0-AUDIT-dock.md`, `STEP2-DOCK-WAYLAND.md`), старий монорепо-README (`README-monolith.md`) |
+| `experiments/` | PROGRESS.md — сесійний журнал великої міграції 2026-09 |
+| `scripts/` | лабораторні скрипти піксельної верифікації (для Lingmo-панелі, див. README в каталозі) |
 
 Ключовий момент розкладки: `MainWindow` реєструє `<bindir>/../lib64/qt6/qml`,
 а RUNPATH `libFishUI.so` — `$ORIGIN/../../..`, тобто каталог бібліотек і
@@ -103,7 +108,7 @@ sudo PREFIX=/usr ./tools/install-user.sh
   вікна: панель з'являється зсувом ~20 px за ~0.07 с. Лікується одним
   викликом `m_layerShell->setScope("dock")` — без нього KWin не має підстави
   показувати поверхню як панель.
-- **Launcher і statusbar** у цей порт не входять.
+- **Statusbar** у цей порт не входить (окремий проєкт — верхня панель).
 
 ## Ліцензія та походження
 
