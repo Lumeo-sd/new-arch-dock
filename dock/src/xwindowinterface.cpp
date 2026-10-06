@@ -127,6 +127,12 @@ QMap<QString, QVariant> XWindowInterface::requestInfo(quint64 wid)
     result.insert("active", window->isActive());
     result.insert("visibleName", window->title());
     result.insert("id", appId);
+    // Window identity at the Wayland level, needed by anything that wants
+    // to address a specific window (e.g. ScreencastingRequest for the
+    // window-preview popup) - those APIs key off the KWin uuid rather than
+    // our internal sequential counter.
+    result.insert("uuid", QString::fromUtf8(window->uuid()));
+    result.insert("minimized", window->isMinimized());
 
     return result;
 }

@@ -75,6 +75,13 @@ public:
 
     Q_INVOKABLE bool openNewInstance(const QString &appId);
     Q_INVOKABLE void closeAllByAppId(const QString &appId);
+
+    // Per-window listing/manipulation, used by the window preview popup to
+    // show every window an app owns and let the user pick one (also for
+    // minimized windows - activation still un-minimizes them).
+    Q_INVOKABLE QVariantList windowInfos(const QString &appId);
+    Q_INVOKABLE void activateWindowForApp(const QString &appId, int widIndex);
+    Q_INVOKABLE void closeWindowForApp(const QString &appId, int widIndex);
     Q_INVOKABLE void pin(const QString &appId);
     Q_INVOKABLE void unPin(const QString &appId);
 

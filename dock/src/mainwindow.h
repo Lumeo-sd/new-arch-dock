@@ -30,6 +30,8 @@
 #include "applicationmodel.h"
 #include "trashmanager.h"
 
+class PreviewController;
+
 namespace LayerShellQt
 {
 class Window;
@@ -70,6 +72,15 @@ public:
 
     QRect primaryGeometry() const;
     int direction() const;
+
+    ApplicationModel *appModel() const { return m_appModel; }
+
+    // Visibly intended rect of the dock surface in screen coordinates.
+    // (QWindow::geometry() on a layer-shell window is unsafe here: QtWayland
+    // has been seen to report (0, 0, w, h) regardless of where KWin placed
+    // the configured anchors+margins, so auxiliary surfaces re-derive the
+    // location from the same math the scene actor used.)
+    QRect dockRect() const { return windowRect(0); }
 
     int visibility() const;
     bool dockHidden() const { return m_dockHidden; }
@@ -125,6 +136,10 @@ private:
     LayerShellQt::Window *m_layerShell;
     // The output the dock currently follows; its signals are re-bound on change.
     QPointer<QScreen> m_boundScreen;
+
+    // Hovering an app icon with several windows shows live previews of its
+    // windows on this auxiliary layer-shell strip just above the dock.
+    PreviewController *m_previewController = nullptr;
 
     // Id of the Plasma virtual desktop the panel is currently mapped on. A
     // layer-shell surface belongs to the desktop it was mapped on, so the

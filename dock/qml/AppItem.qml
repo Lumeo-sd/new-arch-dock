@@ -32,9 +32,14 @@ DockItem {
     showIcon: !model.dropSlot
     isActive: model.isActive
     // The overview row's tooltip says what pressing it will do (the bound
-    // shortcut), or what is missing, instead of its plain name.
+    // shortcut), or what is missing, instead of its plain name. While the
+    // window-preview strip is up for this app the tooltip stays out of the
+    // way: the cards already carry window titles, and the tooltip window
+    // would sit right on the cursor's travel path into the strip (Krema
+    // suppresses its tooltip the same way when a preview opens).
     popupText: model.dropSlot ? ""
-                : (model.appId === "cutefish-overview" ? overview.status : model.visibleName)
+                : ((preview.visible && preview.appId === model.appId) ? ""
+                : (model.appId === "cutefish-overview" ? overview.status : model.visibleName))
     enableActivateDot: !model.dropSlot && windowCount !== 0
     draggable: !model.fixed
     dragItemIndex: index
@@ -56,7 +61,12 @@ DockItem {
 
     onPositionChanged: updateGeometry()
     onPressed: updateGeometry()
-    onRightClicked: if (model.appId !== "cutefish-launcher" && model.appId !== "cutefish-overview") contextMenu.show()
+    // Opening the context menu takes over: hide the preview strip at once
+    // (not delayed), otherwise it paints over the menu.
+    onRightClicked: if (model.appId !== "cutefish-launcher" && model.appId !== "cutefish-overview") {
+        preview.hidePreview()
+        contextMenu.show()
+    }
 
     onClicked: function(mouse) {
         // The overview row is not an application: it has no desktop entry and
@@ -71,6 +81,31 @@ DockItem {
             appModel.clicked(model.appId)
         else if (mouse.button === Qt.MiddleButton)
             appModel.openNewInstance(model.appId)
+    }
+
+    // Hovering an app icon with several windows pops the preview strip above
+    // the dock. The bridge from icon to popup is handled by the timer inside
+    // PreviewController (hidePreviewDelayed), and popup hovering cancels it.
+    Connections {
+        target: mouseArea
+        function onContainsMouseChanged() {
+            console.log("hover:", mouseArea.containsMouse, "app=", model.appId, "wc=", model.windowCount)
+            if (mouseArea.containsMouse && model.windowCount > 1 && !model.dropSlot
+                    && model.appId !== "cutefish-launcher"
+                    && model.appId !== "cutefish-overview"
+                    && !contextMenu.visible) {
+                const p = appItem.mapToGlobal(0, 0)
+                console.log("hover showPreview:", model.appId, p.x, p.y)
+                preview.showPreview(model.appId,
+                                    p.x + appItem.width / 2,
+                                    p.y + appItem.height / 2)
+                // The tooltip opened on entry; close it now that the strip
+                // takes over (its binding above keeps it from reopening).
+                popupTips.hide()
+            } else {
+                preview.hidePreviewDelayed()
+            }
+        }
     }
 
     // Drop-based reorder (the original mechanism): hovering an icon for 300 ms

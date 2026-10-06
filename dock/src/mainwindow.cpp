@@ -21,6 +21,7 @@
 
 #include "overviewmanager.h"
 #include "plasmavirtualdesktop.h"
+#include "previewcontroller.h"
 #include "processprovider.h"
 #include "xwindowinterface.h"
 #include "dockadaptor.h"
@@ -52,6 +53,7 @@ MainWindow::MainWindow(QQuickView *parent)
     , m_showTimer(new QTimer(this))
     , m_hideTimer(new QTimer(this))
     , m_shrinkTimer(new QTimer(this))
+    , m_previewController(nullptr)
 {
     new DockAdaptor(this);
 
@@ -112,10 +114,18 @@ MainWindow::MainWindow(QQuickView *parent)
     engine()->rootContext()->setContextProperty("trash", m_trashManager);
     engine()->rootContext()->setContextProperty("overview", new OverviewManager(this));
 
+    // The preview controller needs the appModel and the other context
+    // properties, so it is created after them - but the main QML may already
+    // reference "preview" in a handler, so it must be present before setSource.
+    m_previewController = new PreviewController(this);
+    engine()->rootContext()->setContextProperty(QStringLiteral("preview"), m_previewController);
+
     setSource(QUrl(QStringLiteral("qrc:/qml/main.qml")));
     setScreen(qApp->primaryScreen());
     setResizeMode(QQuickView::SizeRootObjectToView);
     initScreens();
+
+    m_previewController->initialize();
 
     resizeWindow();
     onVisibilityChanged();

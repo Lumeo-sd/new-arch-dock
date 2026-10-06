@@ -472,6 +472,63 @@ bool ApplicationModel::openNewInstance(const QString &appId)
     return true;
 }
 
+QVariantList ApplicationModel::windowInfos(const QString &appId)
+{
+    QVariantList infos;
+
+    ApplicationItem *item = findItemById(appId);
+
+    if (!item) {
+        qInfo() << "windowInfos: no app for" << appId;
+        return infos;
+    }
+
+    qInfo() << "windowInfos for" << appId << "wids:" << item->wids.length();
+
+    for (quint64 wid : item->wids) {
+        QMap<QString, QVariant> info = m_iface->requestInfo(wid);
+        QVariantMap m;
+        // KWin's screencasting lookup does not know the window under the
+        // braced QUuid form ("{...}", cf. Krema's "Could not find window id"
+        // journal entry); pass the bare id.
+        QString uuid = info.value("uuid").toString();
+        uuid.remove(QLatin1Char('{')).remove(QLatin1Char('}'));
+        m["uuid"] = uuid;
+        m["icon"] = item->iconName;
+        m["title"] = info.value("visibleName");
+        m["active"] = info.value("active");
+        m["minimized"] = info.value("minimized");
+        infos.append(m);
+        qInfo() << "windowInfos entry wid=" << wid
+                << "uuid=" << info.value("uuid").toString()
+                << "title=" << info.value("visibleName").toString()
+                << "active=" << info.value("active").toBool()
+                << "minimized=" << info.value("minimized").toBool();
+    }
+
+    return infos;
+}
+
+void ApplicationModel::activateWindowForApp(const QString &appId, int widIndex)
+{
+    ApplicationItem *item = findItemById(appId);
+
+    if (!item || widIndex < 0 || widIndex >= item->wids.size())
+        return;
+
+    m_iface->forceActiveWindow(item->wids.at(widIndex));
+}
+
+void ApplicationModel::closeWindowForApp(const QString &appId, int widIndex)
+{
+    ApplicationItem *item = findItemById(appId);
+
+    if (!item || widIndex < 0 || widIndex >= item->wids.size())
+        return;
+
+    m_iface->closeWindow(item->wids.at(widIndex));
+}
+
 void ApplicationModel::closeAllByAppId(const QString &appId)
 {
     ApplicationItem *item = findItemById(appId);

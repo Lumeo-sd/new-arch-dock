@@ -27,6 +27,7 @@ set(SRCS
     src/main.cpp
     src/mainwindow.cpp
     src/plasmavirtualdesktop.cpp
+    src/previewcontroller.cpp
     src/systemappmonitor.cpp
     src/systemappitem.cpp
     src/processprovider.cpp

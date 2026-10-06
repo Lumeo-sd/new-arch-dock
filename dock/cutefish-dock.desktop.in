@@ -13,4 +13,4 @@ Exec=@CMAKE_INSTALL_FULL_BINDIR@/cutefish-dock
 Icon=cutefish-dock
 Terminal=false
 Categories=Utility;System;
-X-KDE-Wayland-Interfaces=org_kde_plasma_window_management
+X-KDE-Wayland-Interfaces=org_kde_plasma_window_management,zkde_screencast_unstable_v1
